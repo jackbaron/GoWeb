@@ -1,0 +1,32 @@
+{{ define "footer" }}
+<footer class="footer">
+    <div class="footer__block block no-margin-bottom">
+        <div class="container-fluid text-center">
+            <!-- Please do not remove the backlink to us unless you support us at https://bootstrapious.com/donate. It is part of the license conditions. Thank you for understanding :)-->
+            <p class="no-margin-bottom">2018 &copy; JP company. Design by <a href="https://www.facebook.com/JPTHP.a94">JPME</a>.</p>
+        </div>
+    </div>
+</footer>
+</div>
+<!-- JavaScript files-->
+<script src="../js/jquery.min.js"></script>
+<script src="../js/bootstrap4.min.js"></script>
+<script src="../js/jquery.validate.min.js"></script>
+<script src="../js/front.js"></script>
+<script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js" type="text/javascript"></script>
+<script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('.dataTable').DataTable();
+    } );
+    function isNumberKey(evt)
+    {
+        var charCode = (evt.which) ? evt.which : event.keyCode
+        if (charCode > 31 && (charCode < 48 || charCode > 57))
+            return false;
+        return true;
+    }
+</script>
+</body>
+</html>
+{{ end }}

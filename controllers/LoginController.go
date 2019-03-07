@@ -3,8 +3,10 @@ package controllers
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"projects/blog/dataservice"
+	"projects/blog/helpers"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -17,20 +19,48 @@ var store *sessions.CookieStore
 
 // LoginGet Get Login Form
 func LoginGet(w http.ResponseWriter, r *http.Request) {
+	//  Check is exists session login
+	sess := helpers.Instance(r)
+	if sess.Values["id"] != nil {
+		http.Redirect(w, r, "/admin", http.StatusFound)
+		return
+	}
+
+	v := map[string]interface{}{
+		"FlashedMessages": sess.Flashes(),
+		csrf.TemplateTag:  csrf.TemplateField(r),
+	}
 	t, _ := template.ParseFiles("views/Admin/Login.html")
-	t.Execute(w, map[string]interface{}{
-		csrf.TemplateTag: csrf.TemplateField(r),
-	})
+	t.Execute(w, v)
+}
+
+const (
+	// Name of the session variable that tracks login attempts
+	sessLoginAttempt = "login_attempt"
+)
+
+// loginAttempt increments the number of login attempts in sessions variable
+func loginAttempt(sess *sessions.Session) {
+	// Log the attempt
+	if sess.Values[sessLoginAttempt] == nil {
+		sess.Values[sessLoginAttempt] = 1
+	} else {
+		sess.Values[sessLoginAttempt] = sess.Values[sessLoginAttempt].(int) + 1
+	}
 }
 
 // LoginPost Post Login Form
 func LoginPost(w http.ResponseWriter, r *http.Request) {
-	session, errorSession := store.Get(r, "cockie-name")
-	if errorSession != nil {
-		fmt.Println("StatusInternalServerError")
-		http.Redirect(w, r, "/admin", http.StatusInternalServerError)
+	//create new session
+	sess := helpers.Instance(r)
+
+	// Check user submit post deveice
+	if sess.Values[sessLoginAttempt] != nil && sess.Values[sessLoginAttempt].(int) >= 5 {
+		log.Println("Brute force login prevented")
+		LoginGet(w, r)
 		return
 	}
+
 	repo := dataservice.NewUserRepo()
 	r.ParseForm()
 	userName := r.FormValue("UserName")
@@ -41,21 +71,37 @@ func LoginPost(w http.ResponseWriter, r *http.Request) {
 	if user != nil {
 		err := bcrypt.CompareHashAndPassword(user.PassWord, []byte(passWord))
 		if err == nil {
-			session.Values["username"] = userName
-			err = session.Save(r, w)
-			if err != nil {
-				fmt.Println("Error save session user")
-				http.Redirect(w, r, "/admin", http.StatusInternalServerError)
-			}
+			helpers.Empty(sess)
+			sess.Values["id"] = user.ID
+			sess.Values["name"] = user.Name
+			sess.Save(r, w)
 			http.Redirect(w, r, "/admin", http.StatusFound)
 		} else {
+			sess.AddFlash(helpers.Flash{Message: "Username and password is not correct", Class: helpers.FlashError})
+			sess.Save(r, w)
 			// password is not coreect
-			LoginGet(w, r)
 		}
 	} else {
 		// username is not correct
-		LoginGet(w, r)
+		sess.AddFlash(helpers.Flash{Message: "Username and password is not correct", Class: helpers.FlashError})
+		sess.Save(r, w)
 	}
+	LoginGet(w, r)
+}
+
+// LogOut user
+func LogOut(w http.ResponseWriter, r *http.Request) {
+	// get session
+	sess := helpers.Instance(r)
+	if sess.Values["id"] != nil {
+		helpers.Empty(sess)
+		fmt.Println(sess)
+		sess.AddFlash(helpers.Flash{Message: "Goodbye !", Class: helpers.FlashNotice})
+		sess.Save(r, w)
+		fmt.Println("User Logout")
+		go LoginGet(w, r)
+	}
+	go AdminHome(w, r)
 }
 
 // func RegisterPost(w http.ResponseWriter, r *http.Request) {

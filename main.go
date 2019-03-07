@@ -12,6 +12,8 @@ func main() {
 	// Conect DB here
 	// Load the configuration file
 	helpers.Load("dataservice"+string(os.PathSeparator)+"configDB.json", config)
+	// Configure the session cookie store
+	helpers.Configure(config.Session)
 	// Connect to database
 	dataservice.InitDb(config.Database)
 	// Run server
@@ -32,6 +34,7 @@ var config = &configuration{}
 // configuration contains the application settings
 type configuration struct {
 	Database dataservice.Info `json:"Database"`
+	Session  helpers.Session  `json:"Session"`
 }
 
 // ParseJSON unmarshals bytes to structs
